@@ -3,6 +3,7 @@ package com.authorobra.demo.service;
 import com.authorobra.demo.dtos.ObraDto;
 import com.authorobra.demo.entity.Obra;
 import com.authorobra.demo.repository.ObraRepository;
+import com.authorobra.demo.service.exception.EntityNotFoud;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -11,6 +12,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ObraService {
@@ -25,21 +27,28 @@ public class ObraService {
         return salvar(obra);
     }
 
-    public List<Obra> todasAsObras() {
+    public List<ObraDto> todasAsObras() {
         List<Obra> obras = obraRepository.findAll();
         if (obras.isEmpty()) {
-            throw new IllegalArgumentException("Ainda não temos nenhuma obra");
+            throw new EntityNotFoud("Ainda não temos nenhuma obra");
         }
-        return obras;
+        return obras.stream().map(obra -> new ObraDto(
+                        obra.getId(),
+                        obra.getNome(),
+                        obra.getDescricao(),
+                        obra.getDataPublicacao(),
+                        obra.getDataExposicao()
+                ))
+                .collect(Collectors.toList());
     }
 
     public ObraDto buscaPorId(Long id) {
         Optional<Obra> obra = obraRepository.findById(id);
-        if (obra.isPresent()) {
-            return convertToDTO(obra.get());
-        } else {
-            throw new IllegalArgumentException("Autor não encontrado com o ID: " + id);
+        if (!obra.isPresent()) {
+            throw new EntityNotFoud("Autor não encontrado com o ID: " + id);
         }
+        return convertToDTO(obra.get());
+
     }
 
     public ObraDto atualizarObra(Long id, ObraDto mudancasObra) {
@@ -57,19 +66,19 @@ public class ObraService {
         if (obra.isPresent()) {
             obraRepository.deleteById(id);
         } else {
-            throw new IllegalArgumentException("Não encontramos um Autor com esse Id");
+            throw new EntityNotFoud("Não encontramos um Autor com esse Id");
         }
     }
 
     private void validarNome(String nome) {
         if (nome == null || nome.isEmpty()) {
-            throw new IllegalArgumentException("É necessário um nome para o autor.");
+            throw new EntityNotFoud("É necessário um nome para o autor.");
         }
     }
 
     private void validaDatas(ObraDto obra) {
         if (obra.getDataPublicacao() == null && obra.getDataExposicao() == null) {
-            throw new IllegalArgumentException("É necessário que a Obra tenha uma das datas preenchidas (Publicação ou Exposição)");
+            throw new EntityNotFoud("É necessário que a Obra tenha uma das datas preenchidas (Publicação ou Exposição)");
         }
         if (obra.getDataPublicacao() != null) {
             obra.setDataPublicacao(LocalDate.parse(formatarDataparaString(obra.getDataPublicacao()), DateTimeFormatter.ofPattern("dd/MM/yyyy")));
@@ -97,7 +106,6 @@ public class ObraService {
         dto.setDescricao(obra.getDescricao());
         dto.setDataPublicacao(obra.getDataPublicacao());
         dto.setDataExposicao(obra.getDataExposicao());
-        dto.setAutoresIds(obra.getAutores());
         return dto;
     }
 
@@ -108,7 +116,6 @@ public class ObraService {
         obra.setDescricao(obraDto.getDescricao());
         obra.setDataPublicacao(obraDto.getDataPublicacao());
         obra.setDataExposicao((obraDto.getDataExposicao()));
-        obra.setAutores(obraDto.getAutoresIds());
         return obra;
     }
 

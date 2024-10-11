@@ -21,6 +21,19 @@ public class AutorDto {
     private String pais_orig;
     private String cpf;
 
+    public AutorDto(Long id, String nome, String sexo, String email, LocalDate data_nasc, String pais_orig, String cpf) {
+        this.id = id;
+        this.nome = nome;
+        this.sexo = sexo;
+        this.email = email;
+        this.data_nasc = data_nasc;
+        this.pais_orig = pais_orig;
+        this.cpf = cpf;
+    }
+
+    public AutorDto() {
+    }
+
     public Long getId() {
         return id;
     }

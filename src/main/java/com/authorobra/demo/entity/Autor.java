@@ -1,17 +1,17 @@
 package com.authorobra.demo.entity;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.hibernate.validator.constraints.br.CPF;
-import org.springframework.cglib.core.Local;
-
+import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 @Entity
-public class Autor{
+@Table(name = "autor")
+public class Autor implements Serializable {
 
     @Id
     @GeneratedValue(strategy =  GenerationType.IDENTITY)
@@ -34,7 +34,8 @@ public class Autor{
     @CPF(message = "CPF inválido")
     private String cpf;
 
-    @ManyToMany(mappedBy = "autores", cascade = CascadeType.ALL)
+    @JsonManagedReference
+    @OneToMany(mappedBy = "autor", cascade = CascadeType.ALL)
     private List<Obra> obras = new ArrayList<>();
 
     public Autor(Long id, String nome, String sexo, String email, LocalDate data_nasc, String pais_Orig, String cpf) {

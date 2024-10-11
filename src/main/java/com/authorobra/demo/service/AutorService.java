@@ -4,17 +4,16 @@ import com.authorobra.demo.dtos.AutorDto;
 import com.authorobra.demo.entity.Autor;
 import com.authorobra.demo.repository.AutorRepository;
 import com.authorobra.demo.repository.PaisesRepository;
+import com.authorobra.demo.service.exception.EntityNotFoud;
+import org.aspectj.bridge.IMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class AutorService {
@@ -29,18 +28,28 @@ public class AutorService {
         validarNome(autor.getNome());
         validarEmail(autor.getEmail());
         validarSexo(autor.getSexo());
-        validarCPF(autor.getPais_orig(), autor.getCpf());
+        validarCPF(autor);
         validarDataNascimento(autor);
         validarPais(autor.getPais_orig(), autor);
         return salvar(autor);
     }
 
-    public List<Autor> todosAutores() {
+    public List<AutorDto> todosAutores() {
         List<Autor> autores = autorRepository.findAll();
         if (autores.isEmpty()) {
-            throw new IllegalArgumentException("Ainda não temos nenhum Autor");
+            throw new EntityNotFoud("Ainda não temos nenhum Autor");
         }
-        return autores;
+        return autores.stream()
+                .map(autor -> new AutorDto(
+                        autor.getId(),
+                        autor.getNome(),
+                        autor.getSexo(),
+                        autor.getEmail(),
+                        autor.getData_nasc(),
+                        autor.getPais_orig(),
+                        autor.getCpf()
+                ))
+                .collect(Collectors.toList());
     }
 
     public AutorDto buscaPorId(Long id) {
@@ -48,12 +57,13 @@ public class AutorService {
         if (autor.isPresent()) {
             return convertToDTO(autor.get());
         } else {
-            throw new IllegalArgumentException("Autor não encontrado com o ID: " + id);
+            throw new EntityNotFoud("Autor não encontrado com o ID: " + id);
         }
     }
 
     public AutorDto atualizarAutor(Long id, AutorDto mudancasAutor) {
         AutorDto autorAtual = buscaPorId(id);
+        Optional<Autor> autorExistente = autorRepository.findByCpf(mudancasAutor.getCpf());
 
         if (mudancasAutor.getNome() != null && !mudancasAutor.getNome().isEmpty()) {
             autorAtual.setNome(mudancasAutor.getNome());
@@ -69,8 +79,11 @@ public class AutorService {
             validarPais(mudancasAutor.getPais_orig(), mudancasAutor);
             autorAtual.setPais_orig(mudancasAutor.getPais_orig());
         }
+        if ((!mudancasAutor.getCpf().isEmpty()) && mudancasAutor.getCpf() != autorAtual.getCpf()){
+            validarCPF(mudancasAutor);
+            autorAtual.setCpf(mudancasAutor.getCpf());
+        }
         validarNome(autorAtual.getNome());
-        validarCPF(autorAtual.getPais_orig(), autorAtual.getCpf());
         validarDataNascimento(autorAtual);
         return salvar(autorAtual);
     }
@@ -80,13 +93,13 @@ public class AutorService {
         if (autorId.isPresent()) {
             autorRepository.deleteById(id);
         } else {
-            throw new IllegalArgumentException("Não encontramos um Autor com esse Id");
+            throw new EntityNotFoud("Autor não encontrado");
         }
     }
 
     public boolean dataFutura(LocalDate dataStr) {
         if (dataStr == null) {
-            throw new IllegalArgumentException("A data não pode ser nula.");
+            throw new EntityNotFoud("A data não pode ser nula.");
         }
         LocalDate hoje = LocalDate.now();
         return dataStr.isAfter(hoje);
@@ -94,9 +107,9 @@ public class AutorService {
 
     private void validarDataNascimento(AutorDto autor) {
         if (autor.getData_nasc() == null || autor.getData_nasc().toString().isEmpty()) {
-            throw new IllegalArgumentException("Data deve ser preenchida");
+            throw new EntityNotFoud("Data deve ser preenchida");
         } else if (dataFutura(autor.getData_nasc())) {
-            throw new IllegalArgumentException("Data invalida pois é uma data futura");
+            throw new EntityNotFoud("Data invalida pois é uma data futura");
         }
         String autorDataNascConvert = formatarDataparaString(autor.getData_nasc());
         autor.setData_nasc(formatarData(autorDataNascConvert));
@@ -116,23 +129,23 @@ public class AutorService {
 
     private void validarNome(String nome) {
         if (nome == null || nome.isEmpty()) {
-            throw new IllegalArgumentException("É necessário um nome para o autor.");
+            throw new EntityNotFoud("É necessário um nome para o autor.");
         }
     }
 
     private void validarEmail(String email) {
         if (!email.isEmpty() || email == null){
             if(autorRepository.findByEmail(email).isPresent()) {
-                throw new IllegalArgumentException("E-mail já está em uso.");
+                throw new EntityNotFoud("E-mail já está em uso.");
             }
         }
     }
 
     private void validarPais(String paisOrigem, AutorDto autor) {
         if (!paisesRepository.findByNome(paisOrigem).isPresent()) {
-            throw new IllegalArgumentException("Digite um país válido.");
+            throw new EntityNotFoud("Digite um país válido.");
         } else if (paisOrigem.equals("Brasil")){
-            validarCPF(autor.getPais_orig(), autor.getCpf());
+            validarCPF(autor);
             autor.setCpf(formataCPF(autor.getCpf()));
         }
     }
@@ -140,20 +153,19 @@ public class AutorService {
     private void validarSexo(String sx) {
         if (!(sx.equals("M") || sx.equals("Masculino")
                 || sx.equals("F") || sx.equals("Feminino"))) {
-            throw new IllegalArgumentException("Digite um sexo válido.");
+            throw new EntityNotFoud("Digite um sexo válido.");
         }
     }
 
-    private void validarCPF(String paisOrigem, String cpf) {
-        if (paisOrigem.equals("Brasil")) {
-            if (cpf == null || cpf.isEmpty()) {
-                throw new IllegalArgumentException("CPF é obrigatório para autores do Brasil.");
-            } else if (!validaCPF(cpf)) {
-                throw new IllegalArgumentException("CPF inválido.");
-            } else if (autorRepository.findByCpf(cpf).isPresent()) {
-                throw new IllegalArgumentException("CPF já cadastrado.");
+    private void validarCPF(AutorDto autor) {
+        if (autor.getPais_orig().equals("Brasil")) {
+            if (autor.getCpf() == null || autor.getCpf().isEmpty()) {
+                throw new EntityNotFoud("CPF é obrigatório para autores do Brasil.");
+            } else if (!validaCPF(autor.getCpf())) {
+                throw new EntityNotFoud("CPF inválido.");
             }
         }
+
     }
 
     private AutorDto convertToDTO(Autor autor) {
@@ -192,7 +204,7 @@ public class AutorService {
         cpf = cpf.replaceAll("[^0-9]", "");
 
         if (cpf.length() != 11) {
-            throw new IllegalArgumentException("CPF inválido. Deve conter 11 dígitos.");
+            throw new EntityNotFoud("CPF inválido. Deve conter 11 dígitos.");
         }
 
         return cpf.substring(0, 3) + "." +

@@ -1,5 +1,6 @@
 package com.authorobra.demo.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
@@ -10,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
+@Table(name = "obra")
 public class Obra {
 
     @Id
@@ -28,20 +30,23 @@ public class Obra {
     @JsonFormat(pattern = "dd/MM/yyyy")
     private LocalDate dataExposicao;
 
-    @NotNull
-    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+   /* @NotNull
+    @OneToMany (cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(name = "autor_obra",
         joinColumns = @JoinColumn(name = "obra_id"),
-        inverseJoinColumns = @JoinColumn(name = "autor_id"))
-    private List<Autor> autores = new ArrayList<>();
+        inverseJoinColumns = @JoinColumn(name = "autor_id"))*/
+   @JsonBackReference
+    @ManyToOne
+    @JoinColumn(name = "autor_id")
+    private Autor autor;
 
-    public Obra(Long id, String nome, String descricao, LocalDate dataPublicacao, LocalDate dataExposicao, List<Autor> autores) {
+    public Obra(Long id, String nome, String descricao, LocalDate dataPublicacao, LocalDate dataExposicao, Autor autores) {
         this.id = id;
         this.nome = nome;
         this.descricao = descricao;
         this.dataPublicacao = dataPublicacao;
         this.dataExposicao = dataExposicao;
-        this.autores = autores;
+        this.autor = autores;
     }
 
     public Obra() {
@@ -87,11 +92,11 @@ public class Obra {
         this.dataExposicao = dataExposicao;
     }
 
-    public List<Autor> getAutores() {
-        return autores;
+    public Autor getAutores() {
+        return autor;
     }
 
-    public void setAutores(List<Autor> autores) {
-        this.autores = autores;
+    public void setAutores(Autor autores) {
+        this.autor = autores;
     }
 }

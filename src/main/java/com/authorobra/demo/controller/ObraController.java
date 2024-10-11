@@ -21,11 +21,6 @@ public class ObraController {
     @Autowired
     ObraService obraService;
 
-    /*@GetMapping("/listar")
-    public List<Obra> listarObras() {
-        return obraService.todasAsObras();
-    }*/
-
     @GetMapping("/listar")
     public ResponseEntity<List<ObraDto>> listarObras() {
         List obras = obraService.todasAsObras();

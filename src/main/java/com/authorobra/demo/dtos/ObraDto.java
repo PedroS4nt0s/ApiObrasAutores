@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
-import java.util.List;
 
 public class ObraDto {
 
@@ -19,7 +18,19 @@ public class ObraDto {
     private LocalDate dataPublicacao;
     @JsonFormat(pattern = "dd/MM/yyyy")
     private LocalDate dataExposicao;
-    private List<Autor> autoresIds;
+
+    public ObraDto() {
+    }
+
+    public ObraDto(Long id, String nome, String descricao, LocalDate dataPublicacao, LocalDate dataExposicao) {
+        this.id = id;
+        this.nome = nome;
+        this.descricao = descricao;
+        this.dataPublicacao = dataPublicacao;
+        this.dataExposicao = dataExposicao;
+
+
+    }
 
     public Long getId() {
         return id;
@@ -61,11 +72,5 @@ public class ObraDto {
         this.dataExposicao = dataExposicao;
     }
 
-    public List<Autor> getAutoresIds() {
-        return autoresIds;
-    }
-
-    public void setAutoresIds(List<Autor> autoresIds) {
-        this.autoresIds = autoresIds;
-    }
 }
+
